@@ -122,7 +122,7 @@ function M.detect(root)
     local name, major = parse_package_manager(pkg.packageManager)
     local spec = name and M.get(name)
     if spec then
-      local berry = name == "yarn" and ((major or 1) >= 2 or is_berry(root))
+      local berry = name == "yarn" and ((major or 1) >= 2 or is_berry_upward(root))
       local bound = M.bind(spec, { berry = berry }, "packageManager")
       cache[root] = { value = bound, gen = config.generation() }
       return bound

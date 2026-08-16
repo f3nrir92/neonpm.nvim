@@ -54,6 +54,9 @@ root.patterns  Project root markers.
 ui.picker      Name of the picker backend. nil picks the first available
                entry from ui.picker_order.
 log.auto_open  When to open the output buffer: "error", "always", "never".
+               The output of every command is appended to a buffer named
+               `neonpm://log`, whether or not it opens automatically. Open it
+               at any time with `:sbuffer neonpm://log`.
 run.win        Window for the run command terminal: "split", "vsplit",
                "tab", "float".
 notify         false silences informational notifications. Error messages

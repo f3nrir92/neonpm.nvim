@@ -16,8 +16,11 @@ is installed, it is used for selection; otherwise `vim.ui.select` is.
 lazy.nvim:
 
 ```lua
-{ "f3nrir92/neonpm.nvim", opts = {} }
+{ "f3nrir92/neonpm.nvim", cmd = "NeoNpm" }
 ```
+
+`setup()` is optional, so the plugin can stay lazy until `:NeoNpm` is used. Add
+`opts = { ... }` only when you want to change the defaults.
 
 ## Commands
 

@@ -31,6 +31,10 @@ function M.select_backend()
   return load_backend("select")
 end
 
+--- Invariant: a backend may never call `on_choice` at all when the user cancels —
+--- several picker plugins simply close their window without invoking any callback.
+--- `on_choice` must therefore be a no-op for cancellation: never rely on it running
+--- to clean up or to advance a flow.
 --- @param items table[] { { label = string, value = any } }
 --- @param opts table { prompt = string }
 --- @param on_choice function(value|nil)

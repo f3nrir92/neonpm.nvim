@@ -1,1 +1,1 @@
-{ "name": "yarn-berry-app", "private": true }
+{ "name": "yarn-berry-app", "private": true, "packageManager": "yarn@1.22.22" }
