@@ -45,6 +45,10 @@ Calling setup() is optional — the defaults work out of the box. >lua
       },
       log = { auto_open = "error" },
       run = { win = "split" },
+      progress = {
+        backend = nil,
+        detail = "spinner",
+      },
       notify = true,
     })
 <
@@ -59,6 +63,18 @@ log.auto_open  When to open the output buffer: "error", "always", "never".
                at any time with `:sbuffer neonpm://log`.
 run.win        Window for the run command terminal: "split", "vsplit",
                "tab", "float".
+progress.backend
+               Progress indicator for install, uninstall and update. nil uses
+               fidget.nvim when it is installed; "fidget" requires it; "off"
+               disables the indicator. Without fidget the plugin falls back to
+               plain notifications, and nothing else changes.
+progress.detail
+               "spinner" shows the command line and a spinner. "output" also
+               streams the manager's output into the caption. The manager runs
+               without a TTY, so no percentages are available — the caption is
+               the last line it printed.
+               While an indicator is showing, the ordinary start and finish
+               notifications stand down; failures are still reported.
 notify         false silences informational notifications. Error messages
                are always shown.
 

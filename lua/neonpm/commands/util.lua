@@ -1,4 +1,5 @@
 local notify = require("neonpm.ui.notify")
+local progress = require("neonpm.ui.progress")
 local runner = require("neonpm.runner")
 
 local M = {}
@@ -73,20 +74,38 @@ function M.exec(ctx, req)
     return false, err
   end
 
+  local title = table.concat(argv, " ")
+  local handle = progress.start({ title = title })
+  -- With an indicator on screen the notifications would say the same thing twice,
+  -- so they stand down — except for failures, which the runner still reports.
+  local indicated = progress.is_active()
+
+  local run_opts = { cwd = ctx.root, root = ctx.root, quiet = indicated }
+  if indicated and progress.wants_output() then
+    run_opts.on_output = function(line)
+      handle:report(line)
+    end
+  end
+
   -- A successful command rewrites package.json and/or the lockfile from a subprocess,
   -- which fires no BufWritePost — so the caches must be dropped here.
-  local ok, run_err = runner.run_async(argv, { cwd = ctx.root, root = ctx.root }, function(result)
-    if result.code == 0 then
+  local ok, run_err = runner.run_async(argv, run_opts, function(result)
+    local succeeded = result.code == 0
+    handle:finish(succeeded, succeeded and "done" or string.format("exit code %d", result.code))
+    if succeeded then
       require("neonpm.project").clear_cache()
       require("neonpm.manager").clear_cache()
     end
   end)
   if not ok then
+    handle:finish(false, run_err)
     notify.error(run_err)
     return false, run_err
   end
 
-  notify.info(table.concat(argv, " ") .. " …")
+  if not indicated then
+    notify.info(title .. " …")
+  end
   return true
 end
 

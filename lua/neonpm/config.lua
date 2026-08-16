@@ -9,12 +9,18 @@ M.defaults = {
   },
   log = { auto_open = "error" },
   run = { win = "split" },
+  progress = {
+    backend = nil,
+    detail = "spinner",
+  },
   notify = true,
 }
 
 local MANAGERS = { npm = true, pnpm = true, yarn = true, bun = true }
 local AUTO_OPEN = { error = true, always = true, never = true }
 local WINS = { split = true, vsplit = true, tab = true, float = true }
+local PROGRESS_BACKENDS = { fidget = true, off = true }
+local PROGRESS_DETAILS = { spinner = true, output = true }
 
 local options = vim.deepcopy(M.defaults)
 local gen = 0
@@ -40,6 +46,12 @@ local function validate(opts)
   end
   if opts.ui and opts.ui.picker ~= nil and type(opts.ui.picker) ~= "string" then
     err("ui.picker: expected a string or nil")
+  end
+  if opts.progress and opts.progress.backend ~= nil and not PROGRESS_BACKENDS[opts.progress.backend] then
+    err(string.format("progress.backend: expected fidget|off or nil, got %q", tostring(opts.progress.backend)))
+  end
+  if opts.progress and opts.progress.detail ~= nil and not PROGRESS_DETAILS[opts.progress.detail] then
+    err(string.format("progress.detail: expected spinner|output, got %q", tostring(opts.progress.detail)))
   end
 end
 

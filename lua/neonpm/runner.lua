@@ -15,8 +15,41 @@ function M.is_busy(root)
   return busy[root] ~= nil
 end
 
+--- Builds a stdout/stderr sink that accumulates raw chunks and hands whole lines
+--- to `on_line`. Chunks arrive on read boundaries, not line boundaries, so the
+--- tail of an unfinished line is carried over to the next chunk.
+--- @param chunks string[] accumulator for the complete output
+--- @param on_line function(line: string)
+--- @return function(err: string|nil, data: string|nil)
+local function line_sink(chunks, on_line)
+  local partial = ""
+  return function(_, data)
+    if data == nil then
+      return
+    end
+    table.insert(chunks, data)
+    partial = partial .. data
+
+    local from = 1
+    while true do
+      local newline = partial:find("\n", from, true)
+      if not newline then
+        break
+      end
+      local line = (partial:sub(from, newline - 1):gsub("\r$", ""))
+      from = newline + 1
+      if line ~= "" then
+        vim.schedule(function()
+          on_line(line)
+        end)
+      end
+    end
+    partial = partial:sub(from)
+  end
+end
+
 --- @param argv string[]
---- @param opts table { cwd, root }
+--- @param opts table { cwd, root, on_output = function(line)|nil, quiet = boolean|nil }
 --- @param on_done function|nil
 --- @return boolean, string|nil
 function M.run_async(argv, opts, on_done)
@@ -26,21 +59,39 @@ function M.run_async(argv, opts, on_done)
   end
   busy[root] = argv
 
-  local ok, err = pcall(M.system, argv, { cwd = opts.cwd, text = true }, function(result)
+  -- Streaming and buffering are mutually exclusive in vim.system: passing stdout
+  -- and stderr callbacks means `result` carries no output, so we accumulate it here
+  -- to keep the log buffer complete either way.
+  local streaming = type(opts.on_output) == "function"
+  local out_chunks, err_chunks = {}, {}
+  local system_opts = { cwd = opts.cwd }
+
+  if streaming then
+    system_opts.stdout = line_sink(out_chunks, opts.on_output)
+    system_opts.stderr = line_sink(err_chunks, opts.on_output)
+  else
+    system_opts.text = true
+  end
+
+  local ok, err = pcall(M.system, argv, system_opts, function(result)
     vim.schedule(function()
       busy[root] = nil
+      local stdout = streaming and table.concat(out_chunks) or result.stdout
+      local stderr = streaming and table.concat(err_chunks) or result.stderr
       log.append({
         argv = argv,
         cwd = opts.cwd,
         code = result.code,
-        stdout = result.stdout,
-        stderr = result.stderr,
+        stdout = stdout,
+        stderr = stderr,
       })
       if log.should_open(config.get().log.auto_open, result.code) then
         log.open()
       end
       if result.code == 0 then
-        notify.info(string.format("%s — done", table.concat(argv, " ")))
+        if not opts.quiet then
+          notify.info(string.format("%s — done", table.concat(argv, " ")))
+        end
       else
         notify.error(string.format("%s — exit code %d", table.concat(argv, " "), result.code))
       end

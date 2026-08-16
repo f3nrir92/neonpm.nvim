@@ -49,9 +49,30 @@ require("neonpm").setup({
   },
   log = { auto_open = "error" }, -- "error"|"always"|"never"
   run = { win = "split" },       -- "split"|"vsplit"|"tab"|"float"
+  progress = {
+    backend = nil,               -- nil = use fidget.nvim if installed; "fidget"; "off"
+    detail = "spinner",          -- "spinner"|"output"
+  },
   notify = true,
 })
 ```
+
+## Progress indicator
+
+If [fidget.nvim](https://github.com/j-hui/fidget.nvim) is installed, `install`,
+`uninstall` and `update` show a progress item while they run — the command line
+as the title, then a tick or the exit code when it finishes. Nothing is required
+to enable it, and nothing breaks without it: the indicator falls back to a no-op
+and the ordinary notifications take over.
+
+`detail = "output"` additionally streams the package manager's output into the
+item, so the caption follows along (`resolving`, `added 42 packages`). Note that
+the manager runs without a TTY, so it prints no progress bars or percentages of
+its own — the caption is the last line it wrote, not a completion figure.
+
+While an indicator is on screen the plain start/finish notifications stand down
+to avoid saying the same thing twice. Failures are still reported through
+`vim.notify`, indicator or not.
 
 ## How the manager is chosen
 

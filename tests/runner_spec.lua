@@ -173,4 +173,113 @@ describe("neonpm.runner", function()
       assert.equals(1, count_new_buffers(before, after))
     end)
   end)
+
+  describe("streaming output", function()
+    --- vim.system stub that hands the test the streaming callbacks it was given.
+    local function streaming_system(collector)
+      return function(argv, opts, on_exit)
+        table.insert(collector, {
+          argv = argv,
+          opts = opts,
+          finish = function(result)
+            on_exit(result)
+          end,
+        })
+        return { pid = 4321 }
+      end
+    end
+
+    it("keeps the buffered path when no on_output is given", function()
+      local calls = {}
+      runner.system = streaming_system(calls)
+
+      runner.run_async({ "npm", "install" }, { cwd = "/tmp/a", root = "/tmp/a" })
+
+      assert.is_true(calls[1].opts.text)
+      assert.is_nil(calls[1].opts.stdout)
+      assert.is_nil(calls[1].opts.stderr)
+    end)
+
+    it("asks vim.system for streaming callbacks when on_output is given", function()
+      local calls = {}
+      runner.system = streaming_system(calls)
+
+      runner.run_async({ "npm", "install" }, { cwd = "/tmp/b", root = "/tmp/b", on_output = function() end })
+
+      assert.is_function(calls[1].opts.stdout)
+      assert.is_function(calls[1].opts.stderr)
+    end)
+
+    it("delivers whole lines even when a chunk splits one", function()
+      local calls = {}
+      runner.system = streaming_system(calls)
+
+      local lines = {}
+      runner.run_async({ "npm", "install" }, {
+        cwd = "/tmp/c",
+        root = "/tmp/c",
+        on_output = function(line)
+          table.insert(lines, line)
+        end,
+      })
+
+      calls[1].opts.stdout(nil, "resolving\nfetch")
+      calls[1].opts.stdout(nil, "ing deps\n")
+      vim.wait(200, function()
+        return #lines >= 2
+      end)
+
+      assert.same({ "resolving", "fetching deps" }, lines)
+    end)
+
+    it("still logs the complete output that streaming collected", function()
+      local calls = {}
+      runner.system = streaming_system(calls)
+
+      local log = require("neonpm.ui.log")
+      local logged
+      log.append = function(entry)
+        logged = entry
+      end
+
+      runner.run_async({ "npm", "install" }, {
+        cwd = "/tmp/d",
+        root = "/tmp/d",
+        on_output = function() end,
+      })
+      calls[1].opts.stdout(nil, "added 1 package\n")
+      calls[1].opts.stderr(nil, "npm warn deprecated\n")
+      calls[1].finish({ code = 0 })
+      vim.wait(200, function()
+        return logged ~= nil
+      end)
+
+      assert.matches("added 1 package", logged.stdout)
+      assert.matches("npm warn deprecated", logged.stderr)
+    end)
+
+    it("suppresses the success notification when quiet, but never the failure", function()
+      local calls = {}
+      runner.system = streaming_system(calls)
+      local collected, restore = helpers.capture_notify()
+
+      runner.run_async({ "npm", "install" }, { cwd = "/tmp/e", root = "/tmp/e", quiet = true })
+      calls[1].finish({ code = 0, stdout = "", stderr = "" })
+      vim.wait(200, function()
+        return not runner.is_busy("/tmp/e")
+      end)
+      local after_success = #collected
+
+      runner.run_async({ "npm", "install" }, { cwd = "/tmp/f", root = "/tmp/f", quiet = true })
+      calls[2].finish({ code = 1, stdout = "", stderr = "boom" })
+      vim.wait(200, function()
+        return not runner.is_busy("/tmp/f")
+      end)
+      restore()
+
+      assert.equals(0, after_success)
+      assert.equals(1, #collected)
+      assert.equals(vim.log.levels.ERROR, collected[1].level)
+    end)
+  end)
 end)
