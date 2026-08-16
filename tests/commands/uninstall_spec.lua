@@ -1,7 +1,7 @@
 local helpers = require("tests.helpers")
 
 describe("uninstall command", function()
-  local uninstall, runner, picker, calls, real_executable
+  local uninstall, runner, picker, calls, real_executable, restore_notify
 
   local function ctx()
     local manager = require("neonpm.manager")
@@ -18,6 +18,7 @@ describe("uninstall command", function()
 
   before_each(function()
     helpers.reload()
+    restore_notify = select(2, helpers.capture_notify())
     uninstall = require("neonpm.commands.uninstall")
     runner = require("neonpm.runner")
     picker = require("neonpm.ui.picker")
@@ -34,6 +35,7 @@ describe("uninstall command", function()
 
   after_each(function()
     vim.fn.executable = real_executable
+    restore_notify()
   end)
 
   it("the node is declared correctly", function()

@@ -1,7 +1,7 @@
 local helpers = require("tests.helpers")
 
 describe("run command", function()
-  local run_cmd, runner, picker, terminal_calls, real_executable
+  local run_cmd, runner, picker, terminal_calls, real_executable, restore_notify
 
   local function ctx()
     local manager = require("neonpm.manager")
@@ -15,6 +15,7 @@ describe("run command", function()
 
   before_each(function()
     helpers.reload()
+    restore_notify = select(2, helpers.capture_notify())
     run_cmd = require("neonpm.commands.run")
     runner = require("neonpm.runner")
     picker = require("neonpm.ui.picker")
@@ -30,6 +31,7 @@ describe("run command", function()
 
   after_each(function()
     vim.fn.executable = real_executable
+    restore_notify()
   end)
 
   it("the node is declared correctly", function()

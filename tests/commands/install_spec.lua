@@ -1,7 +1,7 @@
 local helpers = require("tests.helpers")
 
 describe("install and update commands", function()
-  local install, update, runner, calls, real_executable
+  local install, update, runner, calls, real_executable, restore_notify
 
   local function ctx_for(manager_name)
     local manager = require("neonpm.manager")
@@ -15,6 +15,7 @@ describe("install and update commands", function()
 
   before_each(function()
     helpers.reload()
+    restore_notify = select(2, helpers.capture_notify())
     install = require("neonpm.commands.install")
     update = require("neonpm.commands.update")
     runner = require("neonpm.runner")
@@ -32,6 +33,7 @@ describe("install and update commands", function()
 
   after_each(function()
     vim.fn.executable = real_executable
+    restore_notify()
   end)
 
   it("the install node is declared correctly", function()

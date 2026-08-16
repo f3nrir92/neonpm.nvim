@@ -1,10 +1,11 @@
 local helpers = require("tests.helpers")
 
 describe("neonpm.dispatch", function()
-  local dispatch, picker, runner, calls, real_executable
+  local dispatch, picker, runner, calls, real_executable, notifications, restore_notify
 
   before_each(function()
     helpers.reload()
+    notifications, restore_notify = helpers.capture_notify()
     require("neonpm.config").reset()
     dispatch = require("neonpm.dispatch")
     picker = require("neonpm.ui.picker")
@@ -26,6 +27,7 @@ describe("neonpm.dispatch", function()
 
   after_each(function()
     vim.fn.executable = real_executable
+    restore_notify()
   end)
 
   it("executes a subcommand with arguments", function()
@@ -65,20 +67,11 @@ describe("neonpm.dispatch", function()
   end)
 
   it("reports an error for an unknown subcommand", function()
-    local errors = {}
-    local original = vim.notify
-    vim.notify = function(msg, level)
-      table.insert(errors, { msg = msg, level = level })
-    end
-    finally(function()
-      vim.notify = original
-    end)
-
     dispatch.execute({ fargs = { "teleport" } })
 
     assert.equals(0, #calls)
-    assert.equals(1, #errors)
-    assert.equals(vim.log.levels.ERROR, errors[1].level)
+    assert.equals(1, #notifications)
+    assert.equals(vim.log.levels.ERROR, notifications[1].level)
   end)
 
   it("completion returns command names for empty input", function()

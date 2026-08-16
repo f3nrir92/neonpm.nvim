@@ -73,7 +73,14 @@ function M.exec(ctx, req)
     return false, err
   end
 
-  local ok, run_err = runner.run_async(argv, { cwd = ctx.root, root = ctx.root })
+  -- A successful command rewrites package.json and/or the lockfile from a subprocess,
+  -- which fires no BufWritePost — so the caches must be dropped here.
+  local ok, run_err = runner.run_async(argv, { cwd = ctx.root, root = ctx.root }, function(result)
+    if result.code == 0 then
+      require("neonpm.project").clear_cache()
+      require("neonpm.manager").clear_cache()
+    end
+  end)
   if not ok then
     notify.error(run_err)
     return false, run_err
