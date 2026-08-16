@@ -1,7 +1,7 @@
 .PHONY: test lint fmt fmt-check
 
 test:
-	busted
+	eval "$$(luarocks --lua-version=5.1 path)" && busted
 
 lint:
 	luacheck lua tests
