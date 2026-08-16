@@ -27,10 +27,16 @@ describe("neonpm.ui.log", function()
     assert.equals("link text", log.strip_ansi(input))
   end)
 
-  it("handles mixed OSC terminators (ST and BEL) without text loss", function()
+  it("handles mixed OSC terminators, ST then BEL, without text loss", function()
     -- ST-terminated hyperlink followed by BEL-terminated title
     local input = "\27]8;;http://x\27\\hello\27]0;title\7world"
     assert.equals("helloworld", log.strip_ansi(input))
+  end)
+
+  it("handles mixed OSC terminators, BEL then ST, without text loss", function()
+    -- BEL-terminated title followed by ST-terminated hyperlink
+    local input = "\27]0;title\7keep\27]8;;http://x\27\\tail"
+    assert.equals("keeptail", log.strip_ansi(input))
   end)
 
   it("leaves plain text untouched", function()

@@ -11,11 +11,11 @@ function M.strip_ansi(s)
   end
   -- CSI sequences: ESC [ followed by optional params (digits, semicolons, or ?) then a letter
   s = s:gsub("\27%[[?%d;]*[%a]", "")
-  -- OSC sequences: ESC ] followed by content terminated by ST (ESC \) — process first to avoid
-  -- greedy BEL matching crossing ST boundaries
-  s = s:gsub("\27%].-\27\\", "")
-  -- OSC sequences: ESC ] followed by content terminated by BEL (^G) — use non-greedy matching
-  s = s:gsub("\27%].-\7", "")
+  -- OSC sequences: ESC ] followed by a payload terminated by ST (ESC \) or BEL (^G).
+  -- The payload class excludes ESC and BEL themselves, so neither pattern's body can run past
+  -- the *other* terminator — order between the two no longer matters.
+  s = s:gsub("\27%][^\27\7]*\27\\", "")
+  s = s:gsub("\27%][^\27\7]*\7", "")
   -- Carriage returns
   s = s:gsub("\r", "")
   return s
