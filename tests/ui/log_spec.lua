@@ -21,6 +21,12 @@ describe("neonpm.ui.log", function()
     assert.equals("hello", log.strip_ansi("\27]8;;http://example.com\7hello"))
   end)
 
+  it("strips OSC sequences terminated by ST (ESC backslash)", function()
+    -- OSC 8 hyperlink format: OSC 8 ; ; URL ST text OSC 8 ; ; ST
+    local input = "\27]8;;http://example.com\27\\link text\27]8;;\27\\"
+    assert.equals("link text", log.strip_ansi(input))
+  end)
+
   it("leaves plain text untouched", function()
     assert.equals("plain text", log.strip_ansi("plain text"))
   end)
@@ -62,10 +68,20 @@ describe("neonpm.ui.log", function()
 
   it("append preserves modifiable = false even on error", function()
     local bufnr = log.bufnr()
-    -- Cause an error by passing argv as a non-table (table.concat will fail)
-    local ok = (pcall(function()
-      log.append({ argv = "not a table", cwd = "/tmp", code = 0 })
-    end))
+    -- Stub vim.api.nvim_buf_set_lines to raise an error during the protected window
+    local original_set_lines = vim.api.nvim_buf_set_lines
+    vim.api.nvim_buf_set_lines = function() -- luacheck: ignore 122
+      error("simulated buffer write failure", 2)
+    end
+    -- Call append with a valid entry; the error occurs inside pcall
+    local ok = (
+      pcall(function()
+        log.append({ argv = { "npm", "install" }, cwd = "/tmp", code = 0, stdout = "output" })
+      end)
+    )
+    -- Restore the original function
+    vim.api.nvim_buf_set_lines = original_set_lines -- luacheck: ignore 122
+    -- Verify: the call errored and modifiable was restored to false
     assert.is_false(ok)
     assert.is_false(vim.bo[bufnr].modifiable)
   end)

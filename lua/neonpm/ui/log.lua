@@ -13,6 +13,8 @@ function M.strip_ansi(s)
   s = s:gsub("\27%[[?%d;]*[%a]", "")
   -- OSC sequences: ESC ] followed by content terminated by BEL (^G)
   s = s:gsub("\27%][^\7]*\7", "")
+  -- OSC sequences: ESC ] followed by content terminated by ST (ESC \)
+  s = s:gsub("\27%].-\27\\", "")
   -- Carriage returns
   s = s:gsub("\r", "")
   return s
