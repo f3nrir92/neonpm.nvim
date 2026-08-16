@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        neovim: [stable, nightly]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: ${{ matrix.neovim }}
+
+      - uses: leafo/gh-actions-lua@v10
+        with:
+          luaVersion: "luajit"
+
+      - uses: leafo/gh-actions-luarocks@v4
+
+      - name: Install test tooling
+        run: |
+          luarocks --lua-version=5.1 install --local busted
+          luarocks --lua-version=5.1 install --local nlua
+
+      - name: Run tests
+        run: make test
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: leafo/gh-actions-lua@v10
+        with:
+          luaVersion: "luajit"
+
+      - uses: leafo/gh-actions-luarocks@v4
+
+      - name: Install luacheck
+        run: luarocks --lua-version=5.1 install --local luacheck
+
+      - name: Lint
+        run: make lint
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: stylua
+
+      - name: Check formatting
+        run: make fmt-check

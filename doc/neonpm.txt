@@ -1,0 +1,77 @@
+*neonpm.txt*  Node.js package manager commands for Neovim
+
+==============================================================================
+CONTENTS                                                      *neonpm-contents*
+
+  1. Introduction ............................ |neonpm-introduction|
+  2. Commands ................................ |neonpm-commands|
+  3. Configuration ........................... |neonpm-configuration|
+  4. Manager detection ....................... |neonpm-detection|
+
+==============================================================================
+1. INTRODUCTION                                           *neonpm-introduction*
+
+neonpm.nvim provides a single hierarchical command |:NeoNpm| on top of npm,
+pnpm, yarn and bun. The manager is detected automatically from the project
+files. Neovim 0.12 or newer is required.
+
+==============================================================================
+2. COMMANDS                                                   *neonpm-commands*
+
+                                                                     *:NeoNpm*
+:NeoNpm                 Open a picker listing the subcommands.
+
+:NeoNpm install         Install every dependency from the lockfile.
+:NeoNpm install {pkg}   Add a package. Flags: -D (dev), -g (global),
+                        -E (exact version).
+:NeoNpm uninstall       Open a picker listing the dependencies.
+:NeoNpm uninstall {pkg} Remove a package.
+:NeoNpm update          Update the project dependencies.
+:NeoNpm run             Open a picker listing the package.json scripts.
+:NeoNpm run {script}    Run a script in a terminal buffer. Everything after
+                        the name is passed through to the script.
+
+==============================================================================
+3. CONFIGURATION                                         *neonpm-configuration*
+
+                                                             *neonpm.setup()*
+Calling setup() is optional — the defaults work out of the box. >lua
+    require("neonpm").setup({
+      manager = nil,
+      root = { patterns = { "package.json" } },
+      ui = {
+        picker = nil,
+        picker_order = { "telescope", "snacks", "fzf_lua", "mini", "select" },
+      },
+      log = { auto_open = "error" },
+      run = { win = "split" },
+      notify = true,
+    })
+<
+manager        Pin the manager: "npm", "pnpm", "yarn" or "bun".
+               nil detects it automatically.
+root.patterns  Project root markers.
+ui.picker      Name of the picker backend. nil picks the first available
+               entry from ui.picker_order.
+log.auto_open  When to open the output buffer: "error", "always", "never".
+run.win        Window for the run command terminal: "split", "vsplit",
+               "tab", "float".
+notify         false silences informational notifications. Error messages
+               are always shown.
+
+==============================================================================
+4. MANAGER DETECTION                                         *neonpm-detection*
+
+The first matching rule wins:
+
+  1. The manager option of |neonpm.setup()|.
+  2. The packageManager field in package.json.
+  3. Lockfile: searched upward from the directory holding package.json, in
+     the order bun.lock, bun.lockb, pnpm-lock.yaml, yarn.lock,
+     package-lock.json.
+  4. Otherwise npm.
+
+The project root is searched upward from the file in the current buffer, so in
+a monorepo the command runs in the directory of the package being edited.
+
+vim:tw=78:ts=8:ft=help:norl:
