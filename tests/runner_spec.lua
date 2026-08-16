@@ -1,11 +1,16 @@
 local helpers = require("tests.helpers")
 
 describe("neonpm.runner", function()
-  local runner
+  local runner, restore_notify
 
   before_each(function()
     helpers.reload()
+    restore_notify = select(2, helpers.capture_notify())
     runner = require("neonpm.runner")
+  end)
+
+  after_each(function()
+    restore_notify()
   end)
 
   --- vim.system stub: records the call and lets the test finish it manually.
@@ -149,6 +154,22 @@ describe("neonpm.runner", function()
       runner.run_terminal({ "npm", "run", "dev" }, { cwd = "/tmp", root = "/tmp", script = "dev-split" })
 
       local after = vim.api.nvim_list_bufs()
+      assert.equals(1, count_new_buffers(before, after))
+    end)
+
+    it("does not reuse a terminal whose script name merely starts with the requested one", function()
+      config.setup({ run = { win = "split" } })
+      local root = "/tmp/prefix-project"
+      -- A terminal for the "dev:api" script is already open.
+      local sibling = vim.api.nvim_create_buf(true, false)
+      vim.api.nvim_buf_set_name(sibling, runner.terminal_buf_name(root, "dev:api"))
+
+      local before = vim.api.nvim_list_bufs()
+      runner.run_terminal({ "npm", "run", "dev" }, { cwd = root, root = root, script = "dev" })
+      local after = vim.api.nvim_list_bufs()
+
+      assert.is_true(vim.api.nvim_buf_is_valid(sibling))
+      assert.equals(runner.terminal_buf_name(root, "dev:api"), vim.api.nvim_buf_get_name(sibling))
       assert.equals(1, count_new_buffers(before, after))
     end)
   end)

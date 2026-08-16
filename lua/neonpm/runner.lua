@@ -97,8 +97,21 @@ local function job_alive(bufnr)
   return pcall(vim.fn.jobpid, job)
 end
 
+--- Looks a buffer up by its exact name. `vim.fn.bufnr()` treats its argument as a Vim
+--- regex, so it would happily return the "dev:api" terminal when asked for "dev".
+--- @param name string
+--- @return integer|nil
+local function find_buf_by_name(name)
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_buf_get_name(buf) == name then
+      return buf
+    end
+  end
+  return nil
+end
+
 local function start_terminal(argv, opts)
-  local bufnr = vim.api.nvim_create_buf(false, false)
+  local bufnr = vim.api.nvim_create_buf(true, false)
   open_window(bufnr)
   vim.api.nvim_win_set_buf(0, bufnr)
   vim.api.nvim_buf_call(bufnr, function()
@@ -112,9 +125,9 @@ end
 --- @param opts table { cwd, root, script }
 function M.run_terminal(argv, opts)
   local name = M.terminal_buf_name(opts.root, opts.script)
-  local existing = vim.fn.bufnr(name)
+  local existing = find_buf_by_name(name)
 
-  if existing == -1 or not vim.api.nvim_buf_is_valid(existing) then
+  if not existing then
     start_terminal(argv, opts)
     return
   end
