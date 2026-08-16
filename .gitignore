@@ -1,2 +1,7 @@
 docs/superpowers
 .superpowers/
+
+.luarocks/
+luarocks/
+*.rock
+doc/tags
