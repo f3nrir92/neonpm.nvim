@@ -88,4 +88,68 @@ describe("neonpm.runner", function()
     local name = runner.terminal_buf_name("/home/user/app", "dev")
     assert.equals("neonpm://run/home/user/app/dev", name)
   end)
+
+  it("clears the lock and reports the error when vim.system raises synchronously", function()
+    runner.system = function()
+      error("spawn failed")
+    end
+
+    local ok, err = runner.run_async({ "npm", "install" }, { cwd = "/tmp", root = "/tmp" })
+
+    assert.is_false(ok)
+    assert.is_string(err)
+    assert.is_false(runner.is_busy("/tmp"))
+  end)
+
+  describe("run_terminal buffer creation", function()
+    local config
+    local original_jobstart
+
+    before_each(function()
+      config = require("neonpm.config")
+      original_jobstart = vim.fn.jobstart
+      vim.fn.jobstart = function()
+        return 1
+      end
+    end)
+
+    after_each(function()
+      vim.fn.jobstart = original_jobstart
+      config.reset()
+    end)
+
+    local function count_new_buffers(before, after)
+      local before_set = {}
+      for _, b in ipairs(before) do
+        before_set[b] = true
+      end
+      local new_count = 0
+      for _, b in ipairs(after) do
+        if not before_set[b] then
+          new_count = new_count + 1
+        end
+      end
+      return new_count
+    end
+
+    it("creates exactly one buffer in float mode", function()
+      config.setup({ run = { win = "float" } })
+      local before = vim.api.nvim_list_bufs()
+
+      runner.run_terminal({ "npm", "run", "dev" }, { cwd = "/tmp", root = "/tmp", script = "dev-float" })
+
+      local after = vim.api.nvim_list_bufs()
+      assert.equals(1, count_new_buffers(before, after))
+    end)
+
+    it("creates exactly one buffer in split mode", function()
+      config.setup({ run = { win = "split" } })
+      local before = vim.api.nvim_list_bufs()
+
+      runner.run_terminal({ "npm", "run", "dev" }, { cwd = "/tmp", root = "/tmp", script = "dev-split" })
+
+      local after = vim.api.nvim_list_bufs()
+      assert.equals(1, count_new_buffers(before, after))
+    end)
+  end)
 end)

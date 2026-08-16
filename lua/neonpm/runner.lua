@@ -26,7 +26,7 @@ function M.run_async(argv, opts, on_done)
   end
   busy[root] = argv
 
-  M.system(argv, { cwd = opts.cwd, text = true }, function(result)
+  local ok, err = pcall(M.system, argv, { cwd = opts.cwd, text = true }, function(result)
     vim.schedule(function()
       busy[root] = nil
       log.append({
@@ -50,6 +50,11 @@ function M.run_async(argv, opts, on_done)
     end)
   end)
 
+  if not ok then
+    busy[root] = nil
+    return false, tostring(err)
+  end
+
   return true
 end
 
@@ -60,7 +65,9 @@ function M.terminal_buf_name(root, script)
   return string.format("neonpm://run%s/%s", root, script)
 end
 
-local function open_window()
+--- @param bufnr integer buffer to show once the window is open (used by the float branch,
+--- which must open directly on it rather than creating a scratch buffer of its own)
+local function open_window(bufnr)
   local win = config.get().run.win
   if win == "vsplit" then
     vim.cmd.vsplit()
@@ -69,7 +76,7 @@ local function open_window()
   elseif win == "float" then
     local width = math.floor(vim.o.columns * 0.8)
     local height = math.floor(vim.o.lines * 0.8)
-    vim.api.nvim_open_win(vim.api.nvim_create_buf(false, true), true, {
+    vim.api.nvim_open_win(bufnr, true, {
       relative = "editor",
       width = width,
       height = height,
@@ -91,8 +98,8 @@ local function job_alive(bufnr)
 end
 
 local function start_terminal(argv, opts)
-  open_window()
   local bufnr = vim.api.nvim_create_buf(false, false)
+  open_window(bufnr)
   vim.api.nvim_win_set_buf(0, bufnr)
   vim.api.nvim_buf_call(bufnr, function()
     vim.fn.jobstart(argv, { term = true, cwd = opts.cwd })
@@ -129,7 +136,7 @@ function M.run_terminal(argv, opts)
       if win ~= -1 then
         vim.api.nvim_set_current_win(win)
       else
-        open_window()
+        open_window(existing)
         vim.api.nvim_win_set_buf(0, existing)
       end
     end
