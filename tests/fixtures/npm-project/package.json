@@ -1,0 +1,7 @@
+{
+  "name": "npm-project",
+  "version": "1.0.0",
+  "scripts": { "dev": "vite", "build": "vite build" },
+  "dependencies": { "lodash": "^4.17.21" },
+  "devDependencies": { "vite": "^5.0.0" }
+}

@@ -1,0 +1,63 @@
+local helpers = require("tests.helpers")
+
+describe("neonpm.project", function()
+  local project
+
+  before_each(function()
+    helpers.reload()
+    project = require("neonpm.project")
+    project.clear_cache()
+  end)
+
+  it("finds the root from a file inside the project", function()
+    local root = project.find_root(vim.fs.joinpath(helpers.fixture("npm-project"), "src", "index.js"))
+    assert.equals(helpers.fixture("npm-project"), root)
+  end)
+
+  it("finds the nearest package.json in a monorepo, not the repository root", function()
+    local start = vim.fs.joinpath(helpers.fixture("monorepo"), "packages", "app", "src", "main.ts")
+    local root = project.find_root(start)
+    assert.equals(vim.fs.joinpath(helpers.fixture("monorepo"), "packages", "app"), root)
+  end)
+
+  it("returns nil when no package.json exists", function()
+    assert.is_nil(project.find_root("/"))
+  end)
+
+  it("reads package.json", function()
+    local pkg = project.read_package(helpers.fixture("npm-project"))
+    assert.equals("npm-project", pkg.name)
+    assert.equals("vite", pkg.scripts.dev)
+  end)
+
+  it("returns an error for a missing package.json", function()
+    local pkg, err = project.read_package("/definitely/not/here")
+    assert.is_nil(pkg)
+    assert.is_string(err)
+  end)
+
+  it("caches the parsed package.json", function()
+    local first = project.read_package(helpers.fixture("npm-project"))
+    local second = project.read_package(helpers.fixture("npm-project"))
+    assert.equals(first, second)
+  end)
+
+  it("resolve() builds the context from a buffer", function()
+    local file = vim.fs.joinpath(helpers.fixture("npm-project"), "src", "index.js")
+    vim.cmd.edit(vim.fn.fnameescape(file))
+    local ctx, err = project.resolve(vim.api.nvim_get_current_buf())
+    assert.is_nil(err)
+    assert.equals(helpers.fixture("npm-project"), ctx.root)
+    assert.equals("npm-project", ctx.pkg.name)
+  end)
+
+  it("resolve() returns an error outside a Node.js project", function()
+    vim.cmd.enew()
+    local old = vim.uv.cwd()
+    vim.uv.chdir("/")
+    local ctx, err = project.resolve(vim.api.nvim_get_current_buf())
+    vim.uv.chdir(old)
+    assert.is_nil(ctx)
+    assert.is_string(err)
+  end)
+end)
