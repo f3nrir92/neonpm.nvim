@@ -9,7 +9,13 @@ function M.strip_ansi(s)
   if not s or s == "" then
     return ""
   end
-  return (s:gsub("\27%[[%d;]*[%a]", ""):gsub("\r", ""))
+  -- CSI sequences: ESC [ followed by optional params (digits, semicolons, or ?) then a letter
+  s = s:gsub("\27%[[?%d;]*[%a]", "")
+  -- OSC sequences: ESC ] followed by content terminated by BEL (^G)
+  s = s:gsub("\27%][^\7]*\7", "")
+  -- Carriage returns
+  s = s:gsub("\r", "")
+  return s
 end
 
 --- @param mode string "error"|"always"|"never"
@@ -39,10 +45,10 @@ function M.bufnr()
   end
   bufnr = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_name(bufnr, BUF_NAME)
-  vim.bo[bufnr].buftype = "nofile" -- luacheck: ignore
-  vim.bo[bufnr].bufhidden = "hide" -- luacheck: ignore
-  vim.bo[bufnr].swapfile = false -- luacheck: ignore
-  vim.bo[bufnr].modifiable = false -- luacheck: ignore
+  vim.bo[bufnr].buftype = "nofile"
+  vim.bo[bufnr].bufhidden = "hide"
+  vim.bo[bufnr].swapfile = false
+  vim.bo[bufnr].modifiable = false
   return bufnr
 end
 
@@ -76,11 +82,16 @@ function M.append(entry)
   end
   table.insert(lines, "")
 
-  vim.bo[buf].modifiable = true -- luacheck: ignore
-  local existing = vim.api.nvim_buf_line_count(buf)
-  local start = (existing == 1 and vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] == "") and 0 or existing
-  vim.api.nvim_buf_set_lines(buf, start, -1, false, lines)
-  vim.bo[buf].modifiable = false -- luacheck: ignore
+  vim.bo[buf].modifiable = true
+  local ok, err = pcall(function()
+    local existing = vim.api.nvim_buf_line_count(buf)
+    local start = (existing == 1 and vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] == "") and 0 or existing
+    vim.api.nvim_buf_set_lines(buf, start, -1, false, lines)
+  end)
+  vim.bo[buf].modifiable = false
+  if not ok then
+    error(err, 2)
+  end
 end
 
 function M.open()

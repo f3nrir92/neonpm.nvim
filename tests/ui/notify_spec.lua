@@ -10,13 +10,13 @@ describe("neonpm.ui.notify", function()
     config.reset()
     captured = {}
     original = vim.notify
-    vim.notify = function(msg, level) -- luacheck: ignore
+    vim.notify = function(msg, level)
       table.insert(captured, { msg = msg, level = level })
     end
   end)
 
   after_each(function()
-    vim.notify = original -- luacheck: ignore
+    vim.notify = original
   end)
 
   it("prefixes messages with the plugin name", function()
