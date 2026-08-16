@@ -17,6 +17,7 @@ local AUTO_OPEN = { error = true, always = true, never = true }
 local WINS = { split = true, vsplit = true, tab = true, float = true }
 
 local options = vim.deepcopy(M.defaults)
+local gen = 0
 
 local function err(msg)
   error("neonpm: " .. msg, 2)
@@ -49,6 +50,7 @@ function M.setup(opts)
   end
   validate(opts)
   options = vim.tbl_deep_extend("force", vim.deepcopy(M.defaults), opts)
+  gen = gen + 1
 end
 
 function M.get()
@@ -57,6 +59,14 @@ end
 
 function M.reset()
   options = vim.deepcopy(M.defaults)
+  gen = gen + 1
+end
+
+--- Increments on every setup() or reset(); callers can use this to invalidate
+--- caches that depend on configuration without config requiring them back.
+--- @return integer
+function M.generation()
+  return gen
 end
 
 return M

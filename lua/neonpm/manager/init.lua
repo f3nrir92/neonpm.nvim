@@ -42,6 +42,24 @@ local function is_berry(dir)
   return vim.uv.fs_stat(vim.fs.joinpath(dir, ".yarnrc.yml")) ~= nil
 end
 
+--- Walks upward from `dir` looking for a `.yarnrc.yml`, the same way
+--- `detect_by_lockfile` walks upward looking for a lockfile.
+--- @param dir string
+--- @return boolean
+local function is_berry_upward(dir)
+  while dir and dir ~= "" do
+    if is_berry(dir) then
+      return true
+    end
+    local parent = vim.fs.dirname(dir)
+    if parent == dir then
+      break
+    end
+    dir = parent
+  end
+  return false
+end
+
 --- Parses a packageManager field such as "pnpm@9.1.0".
 --- @param value any
 --- @return string|nil name, number|nil major
@@ -81,10 +99,11 @@ local function detect_by_lockfile(root)
 end
 
 --- @param root string
---- @return table|nil, string|nil
+--- @return table|nil bound manager, string|nil error message (present only when detection fails)
 function M.detect(root)
-  if cache[root] then
-    return cache[root]
+  local hit = cache[root]
+  if hit and hit.gen == config.generation() then
+    return hit.value
   end
 
   local override = config.get().manager
@@ -93,8 +112,8 @@ function M.detect(root)
     if not spec then
       return nil, string.format("unknown manager %q in configuration", override)
     end
-    local bound = M.bind(spec, { berry = override == "yarn" and is_berry(root) or false }, "config")
-    cache[root] = bound
+    local bound = M.bind(spec, { berry = override == "yarn" and is_berry_upward(root) or false }, "config")
+    cache[root] = { value = bound, gen = config.generation() }
     return bound
   end
 
@@ -105,7 +124,7 @@ function M.detect(root)
     if spec then
       local berry = name == "yarn" and ((major or 1) >= 2 or is_berry(root))
       local bound = M.bind(spec, { berry = berry }, "packageManager")
-      cache[root] = bound
+      cache[root] = { value = bound, gen = config.generation() }
       return bound
     end
   end
@@ -114,12 +133,12 @@ function M.detect(root)
   if name then
     local spec = M.get(name)
     local bound = M.bind(spec, { berry = name == "yarn" and is_berry(dir) or false }, "lockfile")
-    cache[root] = bound
+    cache[root] = { value = bound, gen = config.generation() }
     return bound
   end
 
   local bound = M.bind(M.get("npm"), {}, "fallback")
-  cache[root] = bound
+  cache[root] = { value = bound, gen = config.generation() }
   return bound
 end
 
