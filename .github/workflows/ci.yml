@@ -20,9 +20,9 @@ jobs:
           neovim: true
           version: ${{ matrix.neovim }}
 
-      - uses: leafo/gh-actions-lua@v10
+      - uses: leafo/gh-actions-lua@v13
         with:
-          luaVersion: "luajit"
+          luaVersion: "5.1"
 
       - uses: leafo/gh-actions-luarocks@v4
 
@@ -39,9 +39,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: leafo/gh-actions-lua@v10
+      - uses: leafo/gh-actions-lua@v13
         with:
-          luaVersion: "luajit"
+          luaVersion: "5.1"
 
       - uses: leafo/gh-actions-luarocks@v4
 
