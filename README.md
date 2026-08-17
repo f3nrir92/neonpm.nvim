@@ -6,10 +6,19 @@ detected automatically: npm, pnpm, yarn or bun.
 ## Requirements
 
 - Neovim 0.12+
-- One of: npm, pnpm, yarn, bun
+- One of: npm, pnpm, yarn, bun, on your `$PATH`
 
-No plugin dependencies are required. If telescope, snacks, fzf-lua or mini.pick
-is installed, it is used for selection; otherwise `vim.ui.select` is.
+**No plugin dependencies are required**, and none of the optional ones need
+configuring — each is detected at the moment it would be used, and its absence
+changes the presentation, never the behaviour:
+
+| Optional plugin | What it adds | Without it |
+| --- | --- | --- |
+| [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim), [snacks.nvim](https://github.com/folke/snacks.nvim), [fzf-lua](https://github.com/ibhagwan/fzf-lua) or [mini.pick](https://github.com/echasnovski/mini.nvim) | picks subcommands, dependencies and scripts | `vim.ui.select` |
+| [fidget.nvim](https://github.com/j-hui/fidget.nvim) | progress indicator for `install`, `uninstall`, `update` | plain notifications |
+
+The first picker found in `ui.picker_order` wins; set `ui.picker` to name one
+explicitly. See [Progress indicator](#progress-indicator) for the fidget side.
 
 ## Installation
 
