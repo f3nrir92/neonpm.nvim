@@ -108,3 +108,7 @@ make fmt-check
 5.4, which is ABI-incompatible with the LuaJIT that `nlua` embeds, and `busted`
 then fails to load. `make test` itself sources the luarocks 5.1 path, so once
 the rocks are installed you can run it directly, with no `eval` beforehand.
+
+## License
+
+[MIT](LICENSE) © Aleksey Tabaksiurov
